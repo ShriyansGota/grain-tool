@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRAIN — Skin Texture Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#17151c;
+    --panel:#201d26;
+    --panel-2:#2a2631;
+    --line:#38333f;
+    --text:#eae6e4;
+    --text-dim:#9c96a3;
+    --gold:#c9a24b;
+    --ice:#8fd0de;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 24px 60px;}
+
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    gap:16px;margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .logo{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:28px;letter-spacing:1px;
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .logo span{color:var(--gold);}
+  .tagline{color:var(--text-dim);font-size:13.5px;max-width:360px;text-align:right;line-height:1.5;}
+  @media (max-width:640px){.tagline{text-align:left;}}
+
+  .modetabs{display:flex;gap:8px;margin-bottom:24px;}
+  .modetab{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;
+    padding:9px 18px;border-radius:20px;border:1px solid var(--line);background:var(--panel);
+    color:var(--text-dim);cursor:pointer;transition:all .15s ease;
+  }
+  .modetab.active{background:var(--gold);color:#211a0c;border-color:var(--gold);}
+  .modetab:not(.active):hover{border-color:var(--gold);color:var(--text);}
+
+  .layout{display:grid;grid-template-columns:1fr 300px;gap:20px;}
+  @media (max-width:860px){.layout{grid-template-columns:1fr;}}
+
+  .stage{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;position:relative;min-height:420px;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  .dropzone{
+    text-align:center;padding:50px 30px;cursor:pointer;color:var(--text-dim);
+    border:1px dashed var(--line);border-radius:10px;margin:24px;width:calc(100% - 48px);
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .dropzone:hover{border-color:var(--gold);color:var(--text);}
+  .dropzone .icon{font-size:34px;margin-bottom:10px;display:block;}
+  .dropzone b{color:var(--text);font-weight:600;}
+  .dropzone input{display:none;}
+
+  .compare{
+    position:relative;width:100%;line-height:0;user-select:none;touch-action:none;
+  }
+  .compare canvas{display:block;width:100%;height:auto;}
+  .layer-before{
+    position:absolute;top:0;left:0;height:100%;overflow:hidden;
+    clip-path:polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  }
+  .layer-before canvas{position:absolute;top:0;left:0;height:100%;}
+
+  .divider{
+    position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--ice);
+    box-shadow:0 0 12px rgba(143,208,222,.7);cursor:ew-resize;
+  }
+  .handle{
+    position:absolute;top:50%;left:50%;width:40px;height:40px;margin:-20px 0 0 -20px;
+    background:var(--panel-2);border:2px solid var(--ice);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;cursor:ew-resize;
+    box-shadow:0 2px 10px rgba(0,0,0,.4);
+  }
+  .handle::before{content:"⟷";color:var(--ice);font-size:16px;}
+
+  .tag{
+    position:absolute;top:14px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    letter-spacing:.08em;color:var(--text-dim);background:rgba(23,21,28,.72);
+    padding:4px 9px;border-radius:20px;border:1px solid var(--line);pointer-events:none;
+  }
+  .tag.left{left:14px;}
+  .tag.right{right:14px;}
+
+  .loupe{
+    position:absolute;width:150px;height:150px;border-radius:50%;
+    border:2px solid var(--gold);box-shadow:0 0 0 4px rgba(23,21,28,.6),0 6px 20px rgba(0,0,0,.5);
+    pointer-events:none;overflow:hidden;display:none;z-index:5;
+  }
+  .loupe canvas{position:absolute;top:0;left:0;}
+  .loupe .ring-label{
+    position:absolute;bottom:6px;left:0;right:0;text-align:center;font-family:'IBM Plex Mono',monospace;
+    font-size:9px;letter-spacing:.1em;color:var(--gold);text-shadow:0 1px 2px rgba(0,0,0,.8);
+  }
+
+  .videostage{width:100%;padding:20px;}
+  .videostage canvas{display:block;width:100%;height:auto;border-radius:8px;background:#000;}
+  .videorow{display:flex;justify-content:center;gap:10px;margin-top:14px;}
+  .iconbtn{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:8px 16px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;
+  }
+  .iconbtn:hover{border-color:var(--gold);}
+
+  aside{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 20px;display:flex;flex-direction:column;gap:22px;height:fit-content;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+    color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;
+  }
+  .control{display:flex;flex-direction:column;gap:8px;}
+  .control-head{display:flex;justify-content:space-between;align-items:baseline;}
+  .control-head label{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;}
+  .control-head .val{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);}
+
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:4px;background:var(--line);border-radius:2px;outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--gold);border:2px solid var(--panel);cursor:pointer;margin-top:-1px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;background:var(--gold);border:2px solid var(--panel);cursor:pointer;
+  }
+
+  .hint{font-size:11.5px;color:var(--text-dim);line-height:1.5;}
+
+  .btnrow{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+  button{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;letter-spacing:.02em;
+    padding:11px 14px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--text);cursor:pointer;transition:border-color .15s ease, transform .05s ease;
+  }
+  button:hover{border-color:var(--gold);}
+  button:active{transform:scale(.98);}
+  button.primary{background:var(--gold);color:#211a0c;border-color:var(--gold);}
+  button.primary:hover{opacity:.92;border-color:var(--gold);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+
+  .status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);text-align:center;min-height:14px;}
+  a.dl-link{
+    display:block;text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13.5px;
+    padding:11px 14px;border-radius:9px;background:var(--ice);color:#0e2226;text-decoration:none;
+  }
+
+  footer{margin-top:34px;text-align:center;color:var(--text-dim);font-size:11.5px;line-height:1.6;}
+  footer b{color:var(--text);}
+  .hide{display:none !important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">GRAIN<span>·</span><span style="font-size:13px;color:var(--text-dim);font-weight:500;font-family:'Inter',sans-serif;">skin texture studio</span></div>
+    <div class="tagline">Frequency-separation skin retouching, entirely in your browser. No upload, no server, no cost.</div>
+  </header>
+
+  <div class="modetabs">
+    <div class="modetab active" id="tabPhoto">Photo</div>
+    <div class="modetab" id="tabVideo">Video</div>
+  </div>
+
+  <div class="layout">
+    <div class="stage" id="stage"></div>
+
+    <aside>
+      <div>
+        <div class="eyebrow">Adjust</div>
+        <div class="control">
+          <div class="control-head"><label>Skin Smoothing</label><span class="val" id="vSmooth">40</span></div>
+          <input type="range" id="smooth" min="0" max="100" value="40">
+          <div class="hint">Tone unevenness aur blemishes ko blend karta hai (low-frequency layer).</div>
+        </div>
+        <div class="control" style="margin-top:16px;">
+          <div class="control-head"><label>Texture Detail</label><span class="val" id="vTexture">130</span></div>
+          <input type="range" id="texture" min="0" max="200" value="130">
+          <div class="hint">Pores aur fine texture ki strength (high-frequency layer). 100 = original.</div>
+        </div>
+        <div class="control" style="margin-top:16px;">
+          <div class="control-head"><label>Sharpness</label><span class="val" id="vSharp">20</span></div>
+          <input type="range" id="sharp" min="0" max="100" value="20">
+          <div class="hint">Overall crispness — eyes, hair, edges.</div>
+        </div>
+      </div>
+
+      <div class="btnrow" id="photoButtons">
+        <button class="primary" id="downloadBtn" disabled>Download Enhanced Photo</button>
+        <button id="resetBtn" disabled>Reset Sliders</button>
+        <button id="newBtn" disabled>Nayi Photo Load Karo</button>
+      </div>
+
+      <div class="btnrow hide" id="videoButtons">
+        <button class="primary" id="exportBtn" disabled>Export Enhanced Video</button>
+        <button id="resetBtnV" disabled>Reset Sliders</button>
+        <button id="newBtnV" disabled>Nayi Video Load Karo</button>
+        <a class="dl-link hide" id="dlLink" download="grain-enhanced.webm">Download Video (.webm)</a>
+      </div>
+
+      <div class="status" id="status">Photo load karne ka wait hai</div>
+    </aside>
+  </div>
+
+  <footer>
+    Yeh tool <b>frequency separation</b> algorithm use karta hai — wahi technique jo Topaz aur pro retouchers skin texture ke liye use karte hain.<br>
+    Sab processing tumhare device par hoti hai; koi photo/video kahin bheji nahi jaati. Video export <b>.webm</b> format mein milta hai (VLC, Chrome, Firefox mein chalta hai).
+  </footer>
+</div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const statusEl = document.getElementById('status');
+  const tabPhoto = document.getElementById('tabPhoto');
+  const tabVideo = document.getElementById('tabVideo');
+
+  const sSmooth = document.getElementById('smooth');
+  const sTexture = document.getElementById('texture');
+  const sSharp = document.getElementById('sharp');
+  const vSmooth = document.getElementById('vSmooth');
+  const vTexture = document.getElementById('vTexture');
+  const vSharp = document.getElementById('vSharp');
+  const DEFAULTS = {smooth:40, texture:130, sharp:20};
+
+  const photoButtons = document.getElementById('photoButtons');
+  const videoButtons = document.getElementById('videoButtons');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const newBtn = document.getElementById('newBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const resetBtnV = document.getElementById('resetBtnV');
+  const newBtnV = document.getElementById('newBtnV');
+  const dlLink = document.getElementById('dlLink');
+
+  let mode = 'photo';
+
+  function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+  function setStatus(msg){ statusEl.textContent = msg; }
+
+  function boxBlurPass(src,w,h,r){
+    const tmp = new Float32Array(w*h);
+    const out = new Float32Array(w*h);
+    const win = r*2+1;
+    for(let y=0;y<h;y++){
+      const off = y*w;
+      let sum=0;
+      for(let x=-r;x<=r;x++){ sum += src[off+clamp(x,0,w-1)]; }
+      for(let x=0;x<w;x++){
+        tmp[off+x] = sum/win;
+        const add = clamp(x+r+1,0,w-1), sub = clamp(x-r,0,w-1);
+        sum += src[off+add] - src[off+sub];
+      }
+    }
+    for(let x=0;x<w;x++){
+      let sum=0;
+      for(let y=-r;y<=r;y++){ sum += tmp[clamp(y,0,h-1)*w+x]; }
+      for(let y=0;y<h;y++){
+        out[y*w+x] = sum/win;
+        const add = clamp(y+r+1,0,h-1), sub = clamp(y-r,0,h-1);
+        sum += tmp[add*w+x] - tmp[sub*w+x];
+      }
+    }
+    return out;
+  }
+  function blurChannel(src,w,h,radius,passes){
+    let cur = src;
+    for(let i=0;i<passes;i++){ cur = boxBlurPass(cur,w,h,radius); }
+    return cur;
+  }
+
+  function buildDropzone(kind){
+    const dz = document.createElement('div');
+    dz.className = 'dropzone';
+    dz.id = 'dropzone';
+    if(kind==='photo'){
+      dz.innerHTML = '<span class="icon">◐</span><b>Photo click karo ya yahan drop karo</b><br>JPG / PNG · browser mein hi process hoga<input type="file" id="fileInput" accept="image/*">';
+    } else {
+      dz.innerHTML = '<span class="icon">▶</span><b>Video click karo ya yahan drop karo</b><br>MP4 / MOV / WebM · browser mein hi process hoga<input type="file" id="fileInput" accept="video/*">';
+    }
+    return dz;
+  }
+
+  function resetToDropzone(kind){
+    stopVideoLoops();
+    stage.innerHTML = '';
+    const dz = buildDropzone(kind);
+    stage.appendChild(dz);
+    dz.addEventListener('click', ()=> document.getElementById('fileInput').click());
+    const fi = document.getElementById('fileInput');
+    fi.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if(kind==='photo') handlePhotoFile(f); else handleVideoFile(f);
+    });
+    dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.style.borderColor='var(--gold)'; });
+    dz.addEventListener('dragleave', ()=>{ dz.style.borderColor=''; });
+    dz.addEventListener('drop', e=>{
+      e.preventDefault();
+      const f = e.dataTransfer.files[0];
+      if(kind==='photo') handlePhotoFile(f); else handleVideoFile(f);
+    });
+  }
+
+  tabPhoto.addEventListener('click', ()=>{
+    if(mode==='photo') return;
+    mode='photo'; tabPhoto.classList.add('active'); tabVideo.classList.remove('active');
+    photoButtons.classList.remove('hide'); videoButtons.classList.add('hide');
+    downloadBtn.disabled=true; resetBtn.disabled=true; newBtn.disabled=true;
+    setStatus('Photo load karne ka wait hai');
+    resetToDropzone('photo');
+  });
+  tabVideo.addEventListener('click', ()=>{
+    if(mode==='video') return;
+    mode='video'; tabVideo.classList.add('active'); tabPhoto.classList.remove('active');
+    videoButtons.classList.remove('hide'); photoButtons.classList.add('hide');
+    exportBtn.disabled=true; resetBtnV.disabled=true; newBtnV.disabled=true;
+    dlLink.classList.add('hide');
+    setStatus('Video load karne ka wait hai');
+    resetToDropzone('video');
+  });
+
+  [sSmooth,sTexture,sSharp].forEach(el=>{
+    el.addEventListener('input', ()=>{
+      vSmooth.textContent = sSmooth.value;
+      vTexture.textContent = sTexture.value;
+      vSharp.textContent = sSharp.value;
+      if(mode==='photo') scheduleRecombine();
+    });
+  });
+
+  function applyResetSliders(){
+    sSmooth.value=DEFAULTS.smooth; sTexture.value=DEFAULTS.texture; sSharp.value=DEFAULTS.sharp;
+    vSmooth.textContent=DEFAULTS.smooth; vTexture.textContent=DEFAULTS.texture; vSharp.textContent=DEFAULTS.sharp;
+    if(mode==='photo') recombine();
+  }
+  resetBtn.addEventListener('click', applyResetSliders);
+  resetBtnV.addEventListener('click', applyResetSliders);
+  newBtn.addEventListener('click', ()=> location.reload());
+  newBtnV.addEventListener('click', ()=> location.reload());
+
+  let W=0,H=0, origR,origG,origB,alphaArr, lowR,lowG,lowB, low2R,low2G,low2B, edgeR,edgeG,edgeB;
+  let afterCanvas, beforeCanvas, afterCtx, beforeCtx, compareWrap, dividerEl, handleEl, loupeEl, loupeCanvas, loupeCtx;
+  let rafPending = false;
+
+  function handlePhotoFile(file){
+    if(!file || !file.type.startsWith('image/')) return;
+    setStatus('Photo load ho rahi hai...');
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; };
+    reader.onerror = () => setStatus('Photo load nahi hui, dobara try karo.');
+    img.onload = () => processPhoto(img);
+    reader.readAsDataURL(file);
+  }
+
+  function processPhoto(img){
+    const MAX = 1500;
+    let w = img.naturalWidth, h = img.naturalHeight;
+    if(w > MAX || h > MAX){ const scale = MAX / Math.max(w,h); w = Math.round(w*scale); h = Math.round(h*scale); }
+    W=w; H=h;
+
+    const off = document.createElement('canvas');
+    off.width=w; off.height=h;
+    const octx = off.getContext('2d');
+    octx.drawImage(img,0,0,w,h);
+    const data = octx.getImageData(0,0,w,h).data;
+
+    origR = new Float32Array(w*h); origG = new Float32Array(w*h); origB = new Float32Array(w*h);
+    alphaArr = new Uint8ClampedArray(w*h);
+    for(let i=0;i<w*h;i++){ origR[i]=data[i*4]; origG[i]=data[i*4+1]; origB[i]=data[i*4+2]; alphaArr[i]=data[i*4+3]; }
+
+    setStatus('Texture layers analyse ho rahi hain...');
+    const baseR = Math.max(2, Math.round(Math.min(w,h)/150));
+    const r1 = baseR, r1b = baseR*4, r2 = Math.max(1, Math.round(baseR/4));
+
+    lowR = blurChannel(origR,w,h,r1,2); lowG = blurChannel(origG,w,h,r1,2); lowB = blurChannel(origB,w,h,r1,2);
+    low2R = blurChannel(lowR,w,h,r1b,2); low2G = blurChannel(lowG,w,h,r1b,2); low2B = blurChannel(lowB,w,h,r1b,2);
+    const bR2 = blurChannel(origR,w,h,r2,1), bG2 = blurChannel(origG,w,h,r2,1), bB2 = blurChannel(origB,w,h,r2,1);
+    edgeR = new Float32Array(w*h); edgeG = new Float32Array(w*h); edgeB = new Float32Array(w*h);
+    for(let i=0;i<w*h;i++){ edgeR[i]=origR[i]-bR2[i]; edgeG[i]=origG[i]-bG2[i]; edgeB[i]=origB[i]-bB2[i]; }
+
+    buildPhotoStage(w,h,off);
+    recombine();
+    setStatus('Ready — sliders se adjust karo.');
+    downloadBtn.disabled=false; resetBtn.disabled=false; newBtn.disabled=false;
+  }
+
+  function buildPhotoStage(w,h,sourceCanvas){
+    stage.innerHTML = '';
+    const wrapDiv = document.createElement('div');
+    wrapDiv.className='compare';
+    compareWrap = wrapDiv;
+
+    afterCanvas = document.createElement('canvas'); afterCanvas.width=w; afterCanvas.height=h;
+    afterCtx = afterCanvas.getContext('2d');
+
+    const beforeWrapper = document.createElement('div');
+    beforeWrapper.className='layer-before';
+    beforeCanvas = document.createElement('canvas'); beforeCanvas.width=w; beforeCanvas.height=h;
+    beforeCtx = beforeCanvas.getContext('2d');
+    beforeCtx.drawImage(sourceCanvas,0,0);
+    beforeWrapper.appendChild(beforeCanvas);
+
+    dividerEl = document.createElement('div'); dividerEl.className='divider';
+    handleEl = document.createElement('div'); handleEl.className='handle';
+    dividerEl.appendChild(handleEl);
+
+    const tagL = document.createElement('div'); tagL.className='tag left'; tagL.textContent='BEFORE';
+    const tagR = document.createElement('div'); tagR.className='tag right'; tagR.textContent='AFTER';
+
+    loupeEl = document.createElement('div'); loupeEl.className='loupe';
+    loupeCanvas = document.createElement('canvas'); loupeCanvas.width=150; loupeCanvas.height=150;
+    loupeCtx = loupeCanvas.getContext('2d'); loupeCtx.imageSmoothingEnabled=false;
+    const loupeLabel = document.createElement('div'); loupeLabel.className='ring-label'; loupeLabel.textContent='4× ZOOM';
+    loupeEl.appendChild(loupeCanvas); loupeEl.appendChild(loupeLabel);
+
+    wrapDiv.appendChild(afterCanvas); wrapDiv.appendChild(beforeWrapper); wrapDiv.appendChild(dividerEl);
+    wrapDiv.appendChild(tagL); wrapDiv.appendChild(tagR); wrapDiv.appendChild(loupeEl);
+    stage.appendChild(wrapDiv);
+
+    setupDrag(beforeWrapper);
+    setupLoupe(wrapDiv);
+  }
+
+  function setupDrag(beforeWrapper){
+    let dragging=false;
+    function setPct(clientX){
+      const rect = compareWrap.getBoundingClientRect();
+      let pct = ((clientX-rect.left)/rect.width)*100;
+      pct = clamp(pct,0,100);
+      dividerEl.style.left = pct+'%';
+      beforeWrapper.style.clipPath = `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
+    }
+    function down(e){ dragging=true; setPct(e.touches?e.touches[0].clientX:e.clientX); e.preventDefault(); }
+    function move(e){ if(!dragging) return; setPct(e.touches?e.touches[0].clientX:e.clientX); }
+    function up(){ dragging=false; }
+    handleEl.addEventListener('mousedown',down);
+    dividerEl.addEventListener('mousedown',down);
+    compareWrap.addEventListener('mousedown',down);
+    window.addEventListener('mousemove',move);
+    window.addEventListener('mouseup',up);
+    handleEl.addEventListener('touchstart',down,{passive:false});
+    compareWrap.addEventListener('touchstart',down,{passive:false});
+    window.addEventListener('touchmove',move,{passive:false});
+    window.addEventListener('touchend',up);
+  }
+
+  function setupLoupe(wrapDiv){
+    wrapDiv.addEventListener('mousemove', e=>{
+      const rect = afterCanvas.getBoundingClientRect();
+      const x = e.clientX-rect.left, y = e.clientY-rect.top;
+      if(x<0||y<0||x>rect.width||y>rect.height){ loupeEl.style.display='none'; return; }
+      loupeEl.style.display='block';
+      loupeEl.style.left = (e.clientX - wrapDiv.getBoundingClientRect().left - 75)+'px';
+      loupeEl.style.top = (e.clientY - wrapDiv.getBoundingClientRect().top - 170)+'px';
+      const scaleX = afterCanvas.width/rect.width, scaleY = afterCanvas.height/rect.height;
+      const zoom = 4, srcSize = 150/zoom;
+      const sx = clamp(x*scaleX - srcSize/2, 0, afterCanvas.width-srcSize);
+      const sy = clamp(y*scaleY - srcSize/2, 0, afterCanvas.height-srcSize);
+      loupeCtx.clearRect(0,0,150,150);
+      loupeCtx.drawImage(afterCanvas, sx, sy, srcSize, srcSize, 0,0,150,150);
+    });
+    wrapDiv.addEventListener('mouseleave', ()=>{ loupeEl.style.display='none'; });
+  }
+
+  function recombine(){
+    if(!afterCtx) return;
+    const smoothAmt = sSmooth.value/100, textureAmt = sTexture.value/100, sharpAmt = sSharp.value/100;
+    const imgData = afterCtx.createImageData(W,H);
+    const out = imgData.data;
+    const n = W*H;
+    for(let i=0;i<n;i++){
+      const lr=lowR[i], lg=lowG[i], lb=lowB[i];
+      const l2r=low2R[i], l2g=low2G[i], l2b=low2B[i];
+      const or_=origR[i], og=origG[i], ob=origB[i];
+      const laR = lr+(l2r-lr)*smoothAmt, laG = lg+(l2g-lg)*smoothAmt, laB = lb+(l2b-lb)*smoothAmt;
+      let rr = laR+(or_-lr)*textureAmt+edgeR[i]*sharpAmt;
+      let gg = laG+(og-lg)*textureAmt+edgeG[i]*sharpAmt;
+      let bb = laB+(ob-lb)*textureAmt+edgeB[i]*sharpAmt;
+      const idx=i*4;
+      out[idx]=rr<0?0:(rr>255?255:rr); out[idx+1]=gg<0?0:(gg>255?255:gg); out[idx+2]=bb<0?0:(bb>255?255:bb); out[idx+3]=alphaArr[i];
+    }
+    afterCtx.putImageData(imgData,0,0);
+  }
+  function scheduleRecombine(){
+    if(rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(()=>{ recombine(); rafPending=false; });
+  }
+
+  downloadBtn.addEventListener('click', ()=>{
+    const link = document.createElement('a');
+    link.download = 'grain-enhanced.png';
+    link.href = afterCanvas.toDataURL('image/png');
+    link.click();
+  });
+
+  let videoEl, srcCanvas, srcCtx, outCanvas, outCtx;
+  let vidW=0, vidH=0, vR1=3, vR1b=10, vR2=1;
+  let previewRafId = null, exportRafId = null, exporting=false, currentObjectUrl=null;
+  let mediaRecorder=null, recordedChunks=[];
+
+  function stopVideoLoops(){
+    if(previewRafId){ cancelAnimationFrame(previewRafId); previewRafId=null; }
+    if(exportRafId){ cancelAnimationFrame(exportRafId); exportRafId=null; }
+    exporting=false;
+    if(mediaRecorder && mediaRecorder.state!=='inactive'){ try{ mediaRecorder.stop(); }catch(e){} }
+    if(videoEl){ try{ videoEl.pause(); }catch(e){} }
+    if(currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl=null; }
+  }
+
+  function handleVideoFile(file){
+    if(!file || !file.type.startsWith('video/')) return;
+    setStatus('Video load ho rahi hai...');
+    if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = URL.createObjectURL(file);
+
+    videoEl = document.createElement('video');
+    videoEl.src = currentObjectUrl;
+    videoEl.muted = true;
+    videoEl.loop = true;
+    videoEl.playsInline = true;
+    videoEl.crossOrigin = 'anonymous';
+
+    videoEl.addEventListener('loadedmetadata', ()=>{
+      const MAXDIM = 480;
+      let w = videoEl.videoWidth, h = videoEl.videoHeight;
+      if(w>MAXDIM || h>MAXDIM){ const scale = MAXDIM/Math.max(w,h); w=Math.round(w*scale); h=Math.round(h*scale); }
+      vidW=w; vidH=h;
+      const baseR = Math.max(2, Math.round(Math.min(w,h)/90));
+      vR1 = baseR; vR1b = baseR*3; vR2 = Math.max(1, Math.round(baseR/3));
+
+      buildVideoStage(w,h);
+      setStatus('Preview chal raha hai — sliders adjust karo, phir Export karo.');
+      exportBtn.disabled=false; resetBtnV.disabled=false; newBtnV.disabled=false;
+
+      videoEl.play().then(()=>{ previewLoop(); }).catch(()=>{ setStatus('Preview shuru nahi hua — Play dabao.'); previewLoop(); });
+    });
+    videoEl.addEventListener('error', ()=> setStatus('Video load nahi hui, dobara try karo.'));
+    videoEl.load();
+  }
+
+  function buildVideoStage(w,h){
+    stage.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'videostage';
+
+    outCanvas = document.createElement('canvas'); outCanvas.width=w; outCanvas.height=h;
+    outCtx = outCanvas.getContext('2d');
+    box.appendChild(outCanvas);
+
+    const row = document.createElement('div'); row.className='videorow';
+    const playBtn = document.createElement('button'); playBtn.className='iconbtn'; playBtn.textContent='Pause Preview';
+    playBtn.addEventListener('click', ()=>{
+      if(videoEl.paused){ videoEl.play(); playBtn.textContent='Pause Preview'; }
+      else { videoEl.pause(); playBtn.textContent='Play Preview'; }
+    });
+    row.appendChild(playBtn);
+    box.appendChild(row);
+
+    stage.appendChild(box);
+
+    srcCanvas = document.createElement('canvas'); srcCanvas.width=w; srcCanvas.height=h;
+    srcCtx = srcCanvas.getContext('2d');
+  }
+
+  function drawAndProcessFrame(){
+    srcCtx.drawImage(videoEl,0,0,vidW,vidH);
+    const imgData = srcCtx.getImageData(0,0,vidW,vidH);
+    const data = imgData.data;
+    const n = vidW*vidH;
+    const oR = new Float32Array(n), oG = new Float32Array(n), oB = new Float32Array(n);
+    for(let i=0;i<n;i++){ oR[i]=data[i*4]; oG[i]=data[i*4+1]; oB[i]=data[i*4+2]; }
+
+    const lR = boxBlurPass(oR,vidW,vidH,vR1), lG = boxBlurPass(oG,vidW,vidH,vR1), lB = boxBlurPass(oB,vidW,vidH,vR1);
+    const l2R = boxBlurPass(lR,vidW,vidH,vR1b), l2G = boxBlurPass(lG,vidW,vidH,vR1b), l2B = boxBlurPass(lB,vidW,vidH,vR1b);
+    const bR2 = boxBlurPass(oR,vidW,vidH,vR2), bG2 = boxBlurPass(oG,vidW,vidH,vR2), bB2 = boxBlurPass(oB,vidW,vidH,vR2);
+
+    const smoothAmt = sSmooth.value/100, textureAmt = sTexture.value/100, sharpAmt = sSharp.value/100;
+    const outData = outCtx.createImageData(vidW,vidH);
+    const out = outData.data;
+    for(let i=0;i<n;i++){
+      const lr=lR[i], lg=lG[i], lb=lB[i];
+      const l2r=l2R[i], l2g=l2G[i], l2b=l2B[i];
+      const or_=oR[i], og=oG[i], ob=oB[i];
+      const edr=or_-bR2[i], edg=og-bG2[i], edb=ob-bB2[i];
+      const laR=lr+(l2r-lr)*smoothAmt, laG=lg+(l2g-lg)*smoothAmt, laB=lb+(l2b-lb)*smoothAmt;
+      let rr=laR+(or_-lr)*textureAmt+edr*sharpAmt;
+      let gg=laG+(og-lg)*textureAmt+edg*sharpAmt;
+      let bb=laB+(ob-lb)*textureAmt+edb*sharpAmt;
+      const idx=i*4;
+      out[idx]=rr<0?0:(rr>255?255:rr); out[idx+1]=gg<0?0:(gg>255?255:gg); out[idx+2]=bb<0?0:(bb>255?255:bb); out[idx+3]=255;
+    }
+    outCtx.putImageData(outData,0,0);
+  }
+
+  function previewLoop(){
+    if(mode!=='video' || exporting) return;
+    if(videoEl && !videoEl.paused && !videoEl.ended){ drawAndProcessFrame(); }
+    previewRafId = requestAnimationFrame(previewLoop);
+  }
+
+  function pickMime(){
+    const types = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+    for(const t of types){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t; }
+    return '';
+  }
+
+  exportBtn.addEventListener('click', ()=>{
+    if(!videoEl || exporting) return;
+    if(previewRafId){ cancelAnimationFrame(previewRafId); previewRafId=null; }
+    exporting = true;
+    recordedChunks = [];
+    dlLink.classList.add('hide');
+    exportBtn.disabled = true;
+    setStatus('Export shuru ho raha hai...');
+
+    const canvasStream = outCanvas.captureStream();
+    let audioTracks = [];
+    try{
+      const vs = videoEl.captureStream ? videoEl.captureStream() : (videoEl.mozCaptureStream ? videoEl.mozCaptureStream() : null);
+      if(vs) audioTracks = vs.getAudioTracks();
+    }catch(e){}
+    const combined = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
+    const mime = pickMime();
+
+    try{
+      mediaRecorder = new MediaRecorder(combined, mime?{mimeType:mime}:undefined);
+    }catch(e){
+      setStatus('Ye browser video export support nahi karta.');
+      exporting=false; exportBtn.disabled=false;
+      return;
+    }
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, {type: mime||'video/webm'});
+      const url = URL.createObjectURL(blob);
+      dlLink.href = url;
+      dlLink.classList.remove('hide');
+      setStatus('Export ho gaya — video download karo.');
+      exportBtn.disabled = false;
+      exporting = false;
+      previewLoop();
+    };
+
+    mediaRecorder.start();
+    videoEl.currentTime = 0;
+    videoEl.loop = false;
+    videoEl.play();
+
+    function exportStep(){
+      if(!exporting) return;
+      if(videoEl.paused || videoEl.ended){
+        if(mediaRecorder.state!=='inactive') mediaRecorder.stop();
+        videoEl.loop = true;
+        return;
+      }
+      drawAndProcessFrame();
+      const pct = videoEl.duration ? Math.min(100, Math.round((videoEl.currentTime/videoEl.duration)*100)) : 0;
+      setStatus('Processing... '+pct+'%');
+      exportRafId = requestAnimationFrame(exportStep);
+    }
+    exportRafId = requestAnimationFrame(exportStep);
+  });
+
+  resetToDropzone('photo');
+})();
+</script>
+</body>
+</html>
